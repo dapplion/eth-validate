@@ -17,18 +17,7 @@ import Header from "./Header";
 window.jQuery = window.$ = $;
 window.Popper = Popper;
 
-// Initialize web3 instances
 const web3s = {};
-for (const provider of Object.values(providers)) {
-  const web3 = new Web3(provider.http);
-  web3.eth.net.isListening().then(nodeIsOk => {
-    if (nodeIsOk) web3s[provider.name] = web3;
-  });
-}
-window.web3s = web3s;
-
-// TXHASH is 32 bytes = 64 characters in hex
-// ADDRESS is 20 bytes = 40 characters in hex
 
 const checkAddress = address =>
   Promise.all(
@@ -83,13 +72,38 @@ class App extends Component {
     super(props);
     // Don't call this.setState() here!
     this.state = {
-      result: []
+      result: [],
+      activeProviders: []
     };
+  }
+
+  componentWillMount() {
+    // Initialize web3 instances
+    Promise.all(
+      Object.values(providers).map(provider => {
+        const web3 = new Web3(provider.http);
+        return web3.eth.net
+          .isListening()
+          .then(nodeIsOk => {
+            if (nodeIsOk) {
+              web3s[provider.name] = web3;
+              return provider.name;
+            }
+          })
+          .catch(console.error);
+      })
+    ).then(providerNames => {
+      const activeProviders = providerNames.filter(name => name);
+      this.setState({ activeProviders });
+    });
   }
 
   onChange(e) {
     let input = e.target.value;
     if (!input || !input.startsWith("0x")) return;
+
+    // ADDRESS is 20 bytes = 40 characters in hex
+    // TXHASH is 32 bytes = 64 characters in hex
     if (input.length === 40 + 2 && Web3Utils.isAddress(input)) {
       this.setState({ loading: true });
       checkAddress(input).then(result => {
@@ -102,10 +116,11 @@ class App extends Component {
       });
     }
   }
+
   render() {
     return (
       <React.Fragment>
-        <Header />
+        <Header activeProviders={this.state.activeProviders} />
         <div className="pricing-header px-3 py-3 pt-md-5 pb-md-4 mx-auto text-center">
           <p className="lead">
             Enter an address, tx hash or token contract from any ethereum chain
