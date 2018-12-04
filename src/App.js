@@ -81,7 +81,7 @@ class App extends Component {
     // Initialize web3 instances
     Promise.all(
       Object.values(providers).map(provider => {
-        const web3 = new Web3(provider.ws);
+        const web3 = new Web3(provider.http);
         return web3.eth.net
           .isListening()
           .then(nodeIsOk => {
